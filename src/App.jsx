@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  computeMetrics, doNothingCost, buildSweep, baselineMetrics, calibration, metricCI,
+  computeMetrics, doNothingCost, buildSweep, calibration,
   sliderToPrev, prevToSlider, PREV_MIN, PREV_MAX,
 } from "./eval";
 import ControlBank from "./components/ControlBank";
@@ -47,8 +47,6 @@ export default function App() {
   const meta = data.meta;
   const prev = sliderToPrev(prevSlider);
   const metrics = computeMetrics(data, threshold, prev, meta, ctx);
-  const ci = metricCI(metrics.tpr, metrics.fpr, metrics.conf.tp + metrics.conf.fn, metrics.conf.fp + metrics.conf.tn, prev, metricKey);
-  const baseline = baselineMetrics(prev, ctx);
 
   return (
     <div className="app">
@@ -72,7 +70,7 @@ export default function App() {
           />
         </div>
 
-        <Readout metricKey={metricKey} metrics={metrics} meta={meta} ci={ci} baseline={baseline} />
+        <Readout metricKey={metricKey} metrics={metrics} meta={meta} />
 
         <div className="col">
           <div className="panel panel-fill">
