@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  computeMetrics, doNothingCost, buildSweep,
+  computeMetrics, doNothingCost, buildSweep, baselineMetrics, calibration, metricCI,
   sliderToPrev, prevToSlider, PREV_MIN, PREV_MAX,
 } from "./eval";
 import ControlBank from "./components/ControlBank";
@@ -8,6 +8,7 @@ import Readout from "./components/Readout";
 import ConfusionGrid from "./components/ConfusionGrid";
 import MetricStrip from "./components/MetricStrip";
 import OperatingCurve from "./components/OperatingCurve";
+import Calibration from "./components/Calibration";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -37,22 +38,22 @@ export default function App() {
 
   const ctx = useMemo(() => data ? { doNothing: doNothingCost(data), auc: data.meta.auc } : null, [data]);
   const sweep = useMemo(() => data ? buildSweep(data, data.meta) : null, [data]);
+  const calib = useMemo(() => data ? calibration(data) : null, [data]);
 
-  if (!index || !data || !ctx || !sweep) {
+  if (!index || !data || !ctx || !sweep || !calib) {
     return <div className="app"><div style={{ padding: 40, color: "var(--dim)", fontFamily: "var(--mono)" }}>se calibrează instrumentul…</div></div>;
   }
 
   const meta = data.meta;
   const prev = sliderToPrev(prevSlider);
   const metrics = computeMetrics(data, threshold, prev, meta, ctx);
+  const ci = metricCI(metrics.tpr, metrics.fpr, metrics.conf.tp + metrics.conf.fn, metrics.conf.fp + metrics.conf.tn, prev, metricKey);
+  const baseline = baselineMetrics(prev, ctx);
 
   return (
     <div className="app">
       <div className="topbar">
-        <div className="brand">
-          <h1 className="mark">Instrumentul<span className="dot">.</span></h1>
-        </div>
-
+        <div className="brand"><h1 className="mark">Instrumentul<span className="dot">.</span></h1></div>
         <div className="dssel">
           {index.map((d) => (
             <button key={d.key} className={d.key === dsKey ? "on" : ""} onClick={() => setDsKey(d.key)}>
@@ -71,7 +72,7 @@ export default function App() {
           />
         </div>
 
-        <Readout metricKey={metricKey} metrics={metrics} meta={meta} />
+        <Readout metricKey={metricKey} metrics={metrics} meta={meta} ci={ci} baseline={baseline} />
 
         <div className="col">
           <div className="panel panel-fill">
@@ -87,6 +88,11 @@ export default function App() {
         <div className="opc-wrap">
           <OperatingCurve sweep={sweep} prevalence={prev} threshold={threshold} metricKey={metricKey} metrics={metrics} />
         </div>
+      </div>
+
+      <div className="section">
+        <div className="section-head"><span>Calibrare</span></div>
+        <div className="section-body cal-wrap"><Calibration calib={calib} /></div>
       </div>
     </div>
   );

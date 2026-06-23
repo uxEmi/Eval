@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 HERE = Path(__file__).parent
 OUTDIR = HERE / "public" / "data"
@@ -74,6 +74,7 @@ def prepare_one(cfg):
     scores_te = model.predict_proba(X_enc[idx_te])[:, 1]
     yte, amt_te = y_bin[idx_te], amounts[idx_te]
     auc = float(roc_auc_score(yte, scores_te))
+    pr_auc = float(average_precision_score(yte, scores_te))
 
     sub = np.arange(len(idx_te))
     if len(sub) > CAP_EXPORT:
@@ -102,6 +103,7 @@ def prepare_one(cfg):
             "key": cfg["key"], "name": cfg["name"], "noun": cfg["noun"], "blurb": cfg["blurb"],
             "source": f"OpenML #{cfg['data_id']} (reale)",
             "model": "LogisticRegression", "fingerprint": fingerprint, "auc": round(auc, 4),
+            "pr_auc": round(pr_auc, 4),
             "n_test": int(len(sub)), "n_fraud_test": int(yte[sub].sum()),
             "base_prevalence": round(float(yte[sub].mean()), 5),
             "currency": cfg["currency"], "cost_label": cfg["cost_label"],

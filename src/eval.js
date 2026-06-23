@@ -47,7 +47,32 @@ export function computeMetrics(data, threshold, prevalence, meta, ctx) {
   const falseAlarmCost = meta.false_alarm_cost ?? 3;
   const cost = conf.missedLoss + conf.fp * falseAlarmCost;
   const costGoodness = ctx.doNothing > 0 ? 1 - cost / ctx.doNothing : 0;
-  return { conf, tpr, fpr, recall, precision, accuracy, f1, cost, costGoodness, rocAuc: meta.auc };
+  return { conf, tpr, fpr, recall, precision, accuracy, f1, cost, costGoodness, rocAuc: meta.auc, prAuc: meta.pr_auc };
+}
+
+export function baselineMetrics(prevalence, ctx) {
+  return { accuracy: 1 - prevalence, precision: 0, recall: 0, f1: 0, rocAuc: 0.5, prAuc: prevalence, cost: ctx.doNothing, costGoodness: 0 };
+}
+
+export function calibration(data, nbins = 10) {
+  const { scores, labels } = data;
+  const bins = Array.from({ length: nbins }, () => ({ sum: 0, pos: 0, n: 0 }));
+  let brier = 0;
+  for (let i = 0; i < scores.length; i++) {
+    const s = scores[i];
+    const b = Math.min(nbins - 1, Math.floor(s * nbins));
+    bins[b].sum += s; bins[b].pos += labels[i]; bins[b].n++;
+    brier += (s - labels[i]) ** 2;
+  }
+  brier /= scores.length;
+  let ece = 0;
+  const out = bins.map((b, i) => {
+    const meanPred = b.n ? b.sum / b.n : (i + 0.5) / nbins;
+    const obs = b.n ? b.pos / b.n : 0;
+    if (b.n) ece += (b.n / scores.length) * Math.abs(meanPred - obs);
+    return { lo: i / nbins, hi: (i + 1) / nbins, meanPred, obs, n: b.n };
+  });
+  return { bins: out, brier, ece };
 }
 
 export const METRICS = {
@@ -61,8 +86,8 @@ export const METRICS = {
                blurb: "media armonică dintre precizie și recall" },
   rocAuc:    { label: "ROC-AUC",   get: (m) => m.rocAuc,    good: (m) => m.rocAuc,
                blurb: "calitatea ordonării — o proprietate reală, fixă a modelului" },
-  cost:      { label: "Cost",    get: (m) => m.cost,      good: (m) => m.costGoodness,
-               blurb: "pierderi din cazuri ratate + cost de verificare a alarmelor false" },
+  prAuc:     { label: "PR-AUC",    get: (m) => m.prAuc,     good: (m) => m.prAuc,
+               blurb: "aria sub curba precizie-recall — mai onestă decât ROC pe date dezechilibrate" },
 };
 
 export const fmtMetric = (key, v, meta) =>
@@ -219,7 +244,7 @@ function binom(n, p) {
 const pctile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(q * sorted.length)))];
 
 export function metricCI(tpr, fpr, nPos, nNeg, prevalence, metricKey, reps = 400) {
-  if (metricKey === "cost" || metricKey === "rocAuc") return null;
+  if (metricKey === "cost" || metricKey === "rocAuc" || metricKey === "prAuc") return null;
   const out = [];
   for (let r = 0; r < reps; r++) {
     const t = nPos > 0 ? binom(nPos, tpr) / nPos : 0;
