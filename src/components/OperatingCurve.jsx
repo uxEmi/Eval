@@ -23,7 +23,7 @@ export default function OperatingCurve({ sweep, prevalence, threshold, metricKey
   const area = (key) => `M${xOf(0).toFixed(1)},${BASE} L` + pts(key).join(" L") + ` L${xOf(1).toFixed(1)},${BASE} Z`;
 
   return (
-    <div>
+    <div className="opc-root">
       <svg className="opc" viewBox={`0 0 ${W} ${H}`}>
         {[0, 0.25, 0.5, 0.75, 1].map((v) => (
           <g key={v}>

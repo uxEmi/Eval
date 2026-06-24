@@ -55,7 +55,7 @@ export default function App() {
         <div className="dssel">
           {index.map((d) => (
             <button key={d.key} className={d.key === dsKey ? "on" : ""} onClick={() => setDsKey(d.key)}>
-              {d.name} <span className="ds-prev">{(d.base_prevalence * 100).toFixed(d.base_prevalence < 0.01 ? 2 : 1)}%</span>
+              {d.name}
             </button>
           ))}
         </div>
@@ -82,15 +82,15 @@ export default function App() {
 
       <MetricStrip metrics={metrics} metricKey={metricKey} setMetricKey={setMetricKey} meta={meta} />
 
-      <div className="opcsection">
-        <div className="opc-wrap">
-          <OperatingCurve sweep={sweep} prevalence={prev} threshold={threshold} metricKey={metricKey} metrics={metrics} />
+      <div className="duo">
+        <div className="duo-cell">
+          <div className="section-head"><span>Curba de operare</span></div>
+          <div className="duo-body"><OperatingCurve sweep={sweep} prevalence={prev} threshold={threshold} metricKey={metricKey} metrics={metrics} /></div>
         </div>
-      </div>
-
-      <div className="section">
-        <div className="section-head"><span>Calibrare</span></div>
-        <div className="section-body cal-wrap"><Calibration calib={calib} /></div>
+        <div className="duo-cell">
+          <div className="section-head"><span>Calibrare</span></div>
+          <div className="duo-body cal-wrap"><Calibration calib={calib} /></div>
+        </div>
       </div>
     </div>
   );
